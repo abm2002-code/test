@@ -3,6 +3,8 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ dev, main ]
+    paths:
+      - .github/workflows/ci-cd-pipeline.yml
   pull_request:
     branches: [ main ]
 
@@ -32,7 +34,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build Docker image
-        # Use the correct context for the build
         run: |
           cd task-manager/app
           docker build -t task-manager:${{ github.sha }} .
@@ -44,7 +45,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v2
       
