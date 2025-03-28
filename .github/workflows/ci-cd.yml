@@ -32,7 +32,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build Docker image
-        run: docker build -t task-manager:${{ github.sha }} .
+        # Update the path to the Dockerfile
+        run: docker build -t task-manager:${{ github.sha }} -f task-manager/app/Dockerfile .
       - name: Test Docker image
         run: |
           docker images
@@ -58,6 +59,8 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
+          # Update the path to the Dockerfile
+          file: ./task-manager/app/Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/task-manager:${{ github.sha }},${{ secrets.DOCKER_HUB_USERNAME }}/task-manager:latest
       
