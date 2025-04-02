@@ -8,6 +8,7 @@ on:
   pull_request:
     branches: [ main ]
     types: [closed]
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   lint:
@@ -42,9 +43,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: |
-      (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.modified, '.github/workflows/'))) ||
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'push' && contains(github.event.head_commit.modified, '.github/workflows/'))
+      github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v2
         with:
