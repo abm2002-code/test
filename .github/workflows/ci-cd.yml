@@ -72,7 +72,7 @@ jobs:
             sed -i "s|image: .*task-manager:.*|image: ${{ secrets.DOCKER_HUB_USERNAME }}/task-manager:${{ github.sha }}|g" k8s-manifests/flask-deployment.yaml
             git config --global user.name "GitHub Actions"
             git config --global user.email "actions@github.com"
-            git add k8s-manifests/flask-deployment.yaml
+            git add task-manager/k8s-manifests/flask-deployment.yaml
             git commit -m "Update image tag to ${{ github.sha }} [skip ci]" || echo "No changes to commit"
             git push
           else
