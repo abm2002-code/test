@@ -5,6 +5,8 @@ on:
     branches: [ dev2, main ]
   pull_request:
     branches: [ main ]
+    paths:
+      - '.github/workflows/**' 
     types: [closed]
 
 jobs:
@@ -42,13 +44,23 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    # Modified condition to run on push to dev2 branch or when PRs are merged to main
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/dev2') || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.modified, '.github/workflows/'))
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
       
+      # Debugging step to check repository structure and list files
+      - name: List repository files for debugging
+        run: |
+          echo "Listing files in the root directory:"
+          ls -al
+          echo "Listing files in task-manager/k8s-manifests:"
+          ls -al task-manager/k8s-manifests/
+  
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       
@@ -68,34 +80,22 @@ jobs:
       
       - name: Update Kubernetes manifests
         run: |
-          # Check if the file exists
-          if [ -f "k8s-manifests/flask-deployment.yaml" ]; then
-            echo "Found flask-deployment.yaml file"
-            # Print the current content for debugging
-            cat k8s-manifests/flask-deployment.yaml
-            # Use a more specific pattern for replacement
-            sed -i "s|image: .*task-manager:.*|image: ${{ secrets.DOCKER_HUB_USERNAME }}/task-manager:${{ github.sha }}|g" k8s-manifests/flask-deployment.yaml
-            # Check if any changes were made
-            git diff --name-only
-            # Configure git
+          echo "Checking for flask-deployment.yaml file..."
+          if [ -f "task-manager/k8s-manifests/flask-deployment.yaml" ]; then
+            echo "File found, updating image tag."
+            sed -i "s|image: .*task-manager:.*|image: ${{ secrets.DOCKER_HUB_USERNAME }}/task-manager:${{ github.sha }}|g" task-manager/k8s-manifests/flask-deployment.yaml
             git config --global user.name "GitHub Actions"
             git config --global user.email "actions@github.com"
-            # Add the file even if there are no changes (force)
-            git add -f k8s-manifests/flask-deployment.yaml
-            # Commit with a more detailed message
+            git add task-manager/k8s-manifests/flask-deployment.yaml
             git commit -m "Update image tag to ${{ github.sha }} [skip ci]" || echo "No changes to commit"
-            # Push with force if needed
             git push
           else
-            echo "Error: flask-deployment.yaml file not found at k8s-manifests/flask-deployment.yaml"
-            # List files in the directory to debug
-            ls -la
-            ls -la k8s-manifests/ || echo "k8s-manifests directory not found"
+            echo "Error: flask-deployment.yaml file not found in task-manager/k8s-manifests/"
+            exit 1
           fi
-      
+  
       - name: Update Kubernetes deployment
         run: |
           echo "Updating Kubernetes deployment with new image"
-          # In a real environment, you would use kubectl here
           echo "kubectl apply -f ./k8s-manifests/"
           echo "kubectl rollout restart deployment flask-deployment"
